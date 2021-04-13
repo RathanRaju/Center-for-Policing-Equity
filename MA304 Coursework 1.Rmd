@@ -1,0 +1,212 @@
+---
+title: "Assignment 1 -  Center for Policing Equity"
+author: "Rathan Narayana Raju"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+### 1. INTRODUCTION
+This document explains the analysis of crime incidents that happened in the year 2016 in the city of Dallas, Texas. The data consists of around 2384 incidents that occurred. This analysis mainly focuses on the crime rates that were committed by offenders. It mainly discusses the racial discrimination between the Whites and Blacks. This analysis helps us to understand the police violence on a minority group.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Using the Necessary libraries for R Markdown
+library(ggmap)
+library(shiny)
+library(leaflet)
+library(RColorBrewer)
+library(tidyverse)
+library(dplyr)
+library(leaflet.extras)
+library(lubridate)
+library(gridExtra)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggridges)
+library(viridis)
+library(gridExtra)
+library(lubridate)
+library(scales)
+```
+
+### 2. ANALYSIS
+
+```{r echo=FALSE, message=FALSE, warning=FALSE} 
+# Loading the CSV file into df
+df <- read.csv(file ="C:\\Users\\Rathan Raju\\OneDrive\\Desktop\\EDA\\37-00049_UOF-P_2016_prepped.csv", fileEncoding="UTF-8-BOM", na.strings = '..', skip = 1)
+# Removing the unwanted columns or features
+df = subset(df, select = -c(RA,BEAT,SECTOR,street_g,street_t, ForceType4,ForceType5,ForceType6, ForceType7,ForceType8,ForceType9,ForceType10, Cycles_Num))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,fig.width=8, fig.height=3}
+#Plotting the Officers based on Gender and Race
+ggplot(df,aes(OffSex))+geom_bar(fill="#2765f5", color="black") +facet_grid(~OffRace)+theme(axis.text.x = element_text(angle = 360))+labs(x="Sexuality Based on Ethnicity", y= "No of Officers", title="2.1 Officer Gender Equality Based on Race") 
+
+```
+
+From the above plot, we can clearly say that there are a majority of Male officers than Female officers. Most of the Officers belong to "White" Ethnicity. Since this analysis is based on the crime incidents that happened in Dallas, it would be obvious that there are more white people in the United States and police officers would be more of Whites.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=2}
+
+#Plotting the bar plot between the Experienced Officers or least experienced officers who arrested the offenders or not
+ggplot(df,aes(INCIDENT_DATE_LESS_))+geom_histogram(fill='#2765f5', color="black")+facet_grid(~CIT_ARREST)+theme(axis.text.x = element_text(angle = 360))+labs(x="Years of Officer Experience", y= "Count of Officers", title="2.2 Subjects Arrested Based on the Police Officer Experience") 
+
+```
+
+This explains to us that the Officers who have less than 10 years of Experience have arrested most of the offenders with fewer injuries on the field while the officers with more than 10 years of experience are less likely to arrest. By analyzing the data, we can say that around 2000 officers have been hospitalized during the incidents. 
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=3}
+# Converting the date column into the month, date, and year format. 
+df$OCCURRED_D <- as.Date(df$OCCURRED_D, format = "%m/%d/%Y")
+df$OCCURRED_D <- gsub("00","20",df$OCCURRED_D)
+df$OCCURRED_D <- as.Date(df$OCCURRED_D, format = "%Y-%m-%d")
+# Converting the time column and taking the hour of the day where incidents occurred.
+df$OCCURRED_T <- format(strptime(df$OCCURRED_T, "%I:%M:%S %p"), "%H:%M:%S")
+df$OCCURRED_M <- months(as.Date(df$OCCURRED_D))
+df$Ideal_Month <-format(df$OCCURRED_D,"%m")
+# Creating a sub string for hour.
+df$OCCURRED_HOUR <- as.numeric(substr(df$OCCURRED_T, 0, 2))
+df$OCCURRED_DAY <- wday(df$OCCURRED_D, label=TRUE)
+df$OCCURED_HOUR <- substr(df$OCCURRED_T, 0, 2)
+df$OCCURED_DATE <- substr(df$OCCURRED_D, 9, 10)
+
+# Grouping the months into a subset by using groupby function.
+df_ideal_month <-  df %>%
+  group_by(Ideal_Month) %>%
+  summarize(count = n())
+# Creating the scatter plot between months and number of incidents
+ggplot(df_ideal_month, aes(x=Ideal_Month, y =count, group=1)) + geom_line() + geom_line( size = 1,colour ="blue") + labs(x="Months of 2016", y= "Number of Incidents", title="2.3 Monthly Incident Rates")  + theme_bw()
+```
+
+The above time series plot tells us in which month of the year the incidents were at the peak and in which month of the year the incidents were lowest. The highest number of incidents were reported in March with around 258  which is followed by February with around 250 incidents. The lowest number of incidents were reported in December with around 96 incidents. We can also say that the incidents gradually decreased and spiked a bit in the month of September but eventually decreased till December. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=3}
+# Grouping the days and the hour of the day to find the average number of incidents in each hour
+df_incident_day <-  df %>%
+  group_by(OCCURRED_DAY,OCCURED_HOUR) %>%
+  summarize(count = n())
+
+df$OCCURED_HOUR <- substr(df$OCCURRED_T, 0, 2)
+# Creating a subset for incidents which occurred during each hour. 
+df   %>% group_by(OCCURRED_HOUR) %>%
+  summarize(avg =n()) -> df_hour_n
+
+# Creating the scatter plot between hour of the day and number of incidents
+ggplot(df_hour_n, aes(x = OCCURRED_HOUR, y = avg, group = "count")) + geom_line( size = 1, colour = "darkblue") + labs(x="Hour of the Day", y= "Number of Incidents", title="2.4 Hourly Incident Rates")+ theme_bw() +
+  theme(axis.text.x=element_text(angle=-90, vjust=0.5)) +  theme_bw()
+```
+
+By analyzing the above time series plot we can say that the highest peak was observed in the evening time around 5 PM to 8 PM. Nearly 200 incidents were reported during this time of the day. This is followed by 150 incidents that were occurring around 2 AM in the early morning. The lowest incidents were happening between 7 AM and 10 AM in the morning.
+ 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=2.5}
+#Plotting time series of Incidents based on Divisions
+ggplot(df,aes(Ideal_Month ,fill=DIVISION))+geom_bar() + labs(x="Months of 2016", y= "Number of Incidents", title="2.5 Incidents based on Divisions")+ theme_bw() +
+  theme(axis.text.x=element_text(angle=-360)) 
+
+```
+
+
+
+There are 7 division in Dallas out of which "Central" division has the highest number of crimes rates reported and the "North West" division has the least number of crime rates reported. There is a decline in number of incidents reported in almost all the divisions. All the divisions had the lowest number of incidents in the month of December except "North East".    
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=3}
+# Creating the subset for three subject races in order to determine which race committed the most crimes
+df   %>% 
+  filter(CitRace == "Black"  | CitRace == "White"| CitRace == "Hispanic") %>%
+  group_by(OCCURRED_D,Ideal_Month,CitRace) %>% dplyr::summarize(avg =n()) -> df_sub_race
+
+# Creating a violin plot between the subject race and number of incidents
+ggplot(df_sub_race , aes(x = (Ideal_Month), y= avg, fill = Ideal_Month)) + geom_violin() +
+  labs(x= 'Days',y = 'Incident Rate', title = paste("2.6 Crime Rates based on Subject Race")) +
+  # theme_bw() +
+  theme(legend.position="none") + facet_wrap(~CitRace)  + 
+  coord_cartesian(ylim = c(1, 12))
+```
+
+
+
+By looking at the plot, it clearly indicates that "Black", "Hispanic", and "White" are the three top races that had been committing more crimes compared to the other races that have less contribution to the crime incidents. Out of the three races, we can clearly say that the "Black" race committed most number of crimes than any other race and most of the crimes have been committed in the month of March. 
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=4}
+# Removing the NULL values and other reasons which had a minimal value.
+df <- df[!df$UOF_REASON == "NULL", ] 
+df <- df[!df$UOF_REASON == "Other", ] 
+df <- df[!df$UOF_REASON == "Property Destruction",]
+df <- df[!df$UOF_REASON == "Crowd Disbursement",]
+df <- df[!df$UOF_REASON == "Aggressive Animal",]
+colnames(df)[colnames(df) == 'ForceType1'] <- 'Force_Used'
+
+# Creating a Bar plot betwwen the type of force used and reason for force
+ggplot(df,aes(UOF_REASON,fill=Force_Used )) + geom_bar( color = "#1a1a1a") +theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1))+
+  labs(x= 'Reason for Force',y = 'Type of Force used', 
+       title = paste("2.7 Type of Force used against the Offenders ")) 
+```
+
+
+There are plethora of forces that have been used against the offenders by the officers. The most common force used is "Weapon Display at Person" which is the most ideal way for the officer to arrest. The second common force used is "Hand/Arm/Elbow Strike" for Arrest. This would be the case when the offenders try to escape or smack the police officer, the officer should use this type of force for arrest. The police officers have used these type of forces when when find someone who is Danger to self or others, assaulting the other person, and someone with active aggression. During these incidents, there are more than 2000 officers who have got injured and some of them got hospitalized.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=4}
+# Creating a subset for the subject description.
+df_sub_desc <-  df %>%
+  group_by(CIT_INFL_A) %>%
+  summarize(count = n())
+
+# Removing the NULL and Unknown values 
+df_sub_desc <- df_sub_desc[!df_sub_desc$CIT_INFL_A == "NULL", ] 
+df_sub_desc <- df_sub_desc[!df_sub_desc$CIT_INFL_A == "Unknown", ] 
+
+
+# Creating the points for the description of subject
+ggplot(df_sub_desc, aes(x=CIT_INFL_A, y=count)) +
+geom_point(size=7, color="black", fill=alpha("blue", 0.3), alpha=0.7, shape=21, stroke=2) + 
+geom_segment( aes(x=CIT_INFL_A, xend=CIT_INFL_A, y=0, yend=count) , size=1, color="black", linetype="dotted" ) + 
+theme(axis.text.x=element_text(angle=-315, vjust=1, hjust = 1))+
+labs(x="Subject Description", y= "No of Incidents", title="2.8 Description of the Subject") 
+```
+
+When we look at the pattern of these offenders, most of them are addicted to Alcohol and unknown drugs which makes them to commit the crime and offend others. Above all these addictions, majority of the offenders are Mentally unstable. 
+
+### 3. SUMMARY STATISTICS 
+
+Statistics of Officers Experience
+```{r echo=FALSE, message=FALSE}
+# Summary of officers years of experience
+summary(df$INCIDENT_DATE_LESS_)
+```
+
+Statistics of Street Numbers
+```{r echo=FALSE, message=FALSE}
+# Summary of the Street Numbers
+summary(df$STREET_N)
+```
+
+
+### 4. CONCLUSION
+There is a huge conflict between White Officers and people from Black Race which is leading to surveillance on black people that increases and that leads to more force used on the Black race. These incidents are taking place because the White officers charge more black people which in turn makes the black people attack the white officers back. There was an abundance of incidents that took place around street number 5000. Upon analyzing the dataset, we can clearly say that there is a Racial bias in the United States Police department. 
+
+
+### 5. REFERENCES
+
+1. https://www.kaggle.com/vincentkr18/eda-time-series-analysis-policing-equity
+2. https://www.rdocumentation.org/
+3. https://rpubs.com/
+4. https://ggplot2.tidyverse.org/index.html
+
+
+
+
+

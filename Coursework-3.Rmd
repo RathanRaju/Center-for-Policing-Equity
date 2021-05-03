@@ -1,0 +1,211 @@
+---
+title: "Coursework 3 -  Policing Equity in year 2016"
+subtitle: "What criteria do we use to assess justice?"
+author: "Rathan Narayana Raju"
+date: "25/03/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse) 
+library(ggmap)
+library(dplyr)
+library(rgdal)
+library(sf) 
+library(ggplot2)
+library(leaflet)
+library(lubridate)
+library(scales)
+library(plotly)
+library(viridis)
+library(ggridges)
+
+```
+
+## 1. INTRODUCTION
+
+In this report, we will be analyzing the dataset of police equity which consists of crime incidents that occurred in the United States of America along with the information about the location, Officer, subject, race, date, and other features. This would be an extension of the analysis done in coursework 1 and would be an in-depth analysis and unearth hidden insights compared to the initial analysis. 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+shp <- readOGR(dsn = "C:\\Users\\Rathan Raju\\OneDrive\\Desktop\\EDA\\Coursework - 3\\CW3\\37-00049_Shapefiles/EPIC.shp")
+shp_df <- fortify(shp)
+df <- read.csv("C:\\Users\\Rathan Raju\\OneDrive\\Desktop\\EDA\\Coursework - 3\\CW3\\37-00049_UOF-P_2016_prepped.csv", skip = 1)
+
+```
+
+## 2. ANALYSIS
+
+### 2.1  Incident Locations based on Latitude and Longitude
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.fullwidth=TRUE, out.width = "100%"}
+
+
+# plot map using ggplot
+shpMap <- ggplot(data = shp_df, aes(long,lat)) +
+  geom_polygon(aes(group = group), fill="grey80") +
+  coord_equal() +
+  labs(x = "Longitude (Degrees)",
+       y = "Latitude (Degrees)",
+       title = "Map ",
+       subtitle = "Map - Based on the Lat Long in Shape Files")
+
+
+int_map <- leaflet() %>% 
+
+  addTiles()  %>% 
+  #setView(-122.36, 47.67, zoom = 10) %>% 
+  addCircleMarkers(lng =df$Longitude, 
+                   lat = df$Latitude,
+                   label = df$`Date Occurred`,
+                   group = df$Race,
+                   color  = "#fff990",
+                   opacity = 0.2,
+                   clusterOptions =   markerClusterOptions()) 
+
+int_map
+
+
+
+```
+
+The above map shows the number of cases within the city of Dallas, Texas. It highlights the number of cases as "orange" if the cases are more than 100 in that region, "yellow" if the number of cases is more than 10 in that region, and "green" if the number of cases is less than 10. By looking at the above map we can clearly say that the central part of the city has the highest number of cases which is around 1228 followed by the northern part of the city which is around 299. If we zoom in on the map, we get more profound into the map and we can get to know the precise location of the cases that ensued.
+
+
+### 2.1 Incidents based on Divisions
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.fullwidth=TRUE, out.width = "100%"}
+
+df$OCCURRED_D <- as.Date(df$OCCURRED_D, format = "%m/%d/%Y")
+df$OCCURRED_D <- gsub("00","20", df$OCCURRED_D)
+df$OCCURRED_D <- as.Date(df$OCCURRED_D, format = "%Y-%m-%d")
+df$OCCURRED_day <- wday(df$OCCURRED_D, label=TRUE)
+
+df$inc_month <-format(df$OCCURRED_D ,"%m")
+
+df_div <-  df %>%
+  group_by(inc_month,DIVISION) %>%
+  summarize(count = n())
+
+df_year <-  df %>%
+  group_by(OCCURRED_D, inc_month, OCCURRED_day) %>%
+  summarize(count = n())
+
+g2 <-ggplot(df_div, aes(x = inc_month, y = count, group = 'count'))  + geom_point( aes(color= DIVISION), size = 1.2) +
+  geom_smooth(method = "loess")+
+  facet_wrap(~ DIVISION,ncol=4) + #+ theme(axis.text.x=element_text(angle=-90, vjust=0.5)) +
+  theme(legend.position="none") + 
+  labs(x="Months of 2016", y= "Number of Incidents")
+
+
+g3 <- ggplot(df_year, aes(count)) +
+  geom_density(alpha = 0.5, colour = "black", fill ="#b700fa")+ labs(x="Number of Incidents", y= "Solidity") + theme_bw()
+
+
+
+ggplotly(g2)
+
+
+```
+
+In Dallas, there are seven divisions, that have been plotted against the months and the number of counts. The Central Division has the most reported offenses, which are clearly in excess of 40. At Northwest, there are low incident rates and a declining trend. In the South Texas, Southeast, and Southwest, we observed a great decrease in trend. In the Northeast and Northcentral, there is a neutral trend. Almost in every division, there has been a decrease in the number of incidents as the year progresses. With the exception of the Northeast Division, December is the month with the fewest occurrences. In the Northeast, there is a stable and reliable intermittent trend.
+
+
+### 2.3 Density based on incident rates
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.fullwidth=TRUE, out.width = "100%"}
+ggplotly(g3)
+```
+
+The plot above depicts the overall distribution of crime counts. The incident count illustrates a right skewness over the year. More than 25 incidents per day are less visible, and the distribution tops at around 2 to 3 incidents per day. 
+
+
+### 2.4 Cases handled by Officers by Race
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.fullwidth=TRUE, out.width = "100%"}
+df_subrace <-  df %>%
+  group_by(CitRace , inc_month) %>%
+  summarize(Count = n())
+
+df_offrace <-  df %>%
+  group_by(OffRace, inc_month) %>%
+  summarize(Count = n())
+
+df_subrace <- df_subrace[complete.cases(df_subrace), ]
+df_offrace <- df_offrace[complete.cases(df_offrace), ]
+
+
+df_offrace <- subset(df_offrace, df_offrace$OffRace != "Other")
+df_subrace <- subset(df_subrace, df_subrace$CitRace != "Other" & df_subrace$CitRace != "NULL" )
+
+g4 <- ggplot(df_offrace, aes(x= inc_month, y=OffRace,fill = Count)) + geom_tile( ) + 
+  geom_text(aes(inc_month, OffRace, label = Count), color = "black", size = 4) +
+  scale_fill_gradientn(colours = c("#a8ceff", "#1c34ba", "#ff0000")) + labs(x="Race of Officers", y= "Months of 2016") 
+
+g5 <- ggplot(df_subrace, aes(x= inc_month, y=CitRace,fill = Count)) + geom_tile( ) + 
+  geom_text(aes(inc_month, CitRace, label = Count), color = "black", size = 4) + 
+  scale_fill_gradientn(colours = c("#a8ceff", "#1c34ba", "#ff0000")) +  labs(x="Race of Offenders", y= "Months of 2016") 
+
+ggplotly(g4)
+
+
+```
+
+By analyzing the above plot, we can clearly say that most of the cases have been handled by white officers which are followed by the "Hispanic" Race. If the suspect is black, it is self-evident that the prosecution will almost definitely be treated by a white officer. 
+
+
+### 2.4 Cases Commited by Subject by Race
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.fullwidth=TRUE, out.width = "100%"}
+ggplotly(g5)
+
+
+```
+
+By looking at the above plot, we can say that most of the crimes have been committed by the "Black" race which brings a bias in policing and there would be a discrepancy of the race between those who commit criminal acts and those who handle the cases. We need to have more unlikeness among police officers so that their purpose is more respectful among the communities they serve.
+
+
+
+### 2.6 Description of the Offenders
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.fullwidth=TRUE, out.width = "100%"}
+df_subdes <-  df %>%
+  group_by(OCCURRED_D, inc_month ,OCCURRED_day ,CIT_INFL_A) %>%
+  summarize(count = n())
+
+df_subdes <- subset(df_subdes, CIT_INFL_A != "FD-Motor Vehicle" & CIT_INFL_A != "NULL" & CIT_INFL_A != "FD-Animal" & CIT_INFL_A != "Animal" & CIT_INFL_A != "Unknown" & CIT_INFL_A != "None detected"  )  
+
+
+g6<- ggplot(df_subdes, aes(x = OCCURRED_D, y = CIT_INFL_A, fill = ..x..)) +
+#  geom_histogram(x = OCCURRED_D, y = CIT_INFL_A) +
+geom_density_ridges_gradient(size=0.7,scale = 1, rel_min_height = 0.01, gradient_lwd = 1., bandwidth = 6,alpha = 1.5, jittered_points = TRUE,
+                             point_color="cadetblue", calc_ecdf = TRUE, 
+                             quantile_lines = c(TRUE), alpha=0.8, stat="binline", bins=30 ) +
+  
+  scale_fill_viridis(name = "Tail probability", direction = -1) +  
+  
+  labs(x = "Months of 2016", y = "", fill = "#5ab4ac") +
+  
+  theme_ridges(font_size = 13, grid = TRUE) +
+  
+  theme(legend.position = "none") +
+  
+  theme(axis.title.y = element_blank())
+
+g6
+
+
+```
+
+
+In the plot above, we can see the distribution of rates of such representations over time, and the subject description changes over time. Mentally Unstable, as well as Drugs and Alcohol, are evidently constant throughout the year. Nevertheless, we are able to see some random peaks in Marijuana. The number of victims with a gun and a firearm peaks on a consistent basis. Regardless of the fact that these patterns are intermittent, they are a significant number of occurrences or at a high peak when they do. Overall, the violations of drugs and alcohol were nearly distributed evenly over the year. Marijuana has a huge amount of peaks that arise and then go.
+
+
+
+## 3. CONCLUSION
+
+To conclude from the above analysis, firstly the number of crimes over the year demonstrates a declining trajectory, implying that the number of crimes in Dallas is declining over the year. Secondly, the number of crimes in the Central Division is higher. During the month of March, the tendency is heavy in Central, Northeast, and South Central. The Central Division has a greater rate of crime. The trend is particularly strong in Central, Northeast, and South Central during the month of March. Thirdly, there is a huge disparity between the blacks and whites as regards the white officers and black people. When we examine the pattern of these offenders, we can see that a large percentage of them are addicted to alcohol, which pushes them to commit serious crimes and offend others. Above and beyond these addictions, the majority of offenders are mentally ill.
+
+
+
+## 4. REFERENCES
+1. https://www.kaggle.com/nulldata/intro-to-geospatial-mapping-in-r-with-leaflet
+2. https://holtzy.github.io/Pimp-my-rmd/
+3. https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf

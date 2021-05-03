@@ -1,0 +1,303 @@
+---
+title: "Exploratory Data Analysis - Coursework - 2"
+author: "Team L’Atalante"
+date: "19/03/2021"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rgdal)
+library(ggplot2)
+library(sf)
+library(tidyverse)
+library(ggmap)
+library(groupdata2)
+library(dplyr)
+library(ftExtra)
+require(maps)
+require(viridis)
+library(tidyr)
+library('rworldmap')
+library(leaflet)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(lubridate)
+library(hrbrthemes)
+library(plotly)
+library(scales)
+
+```
+
+## 1. INTRODUCTION
+
+The data set is about the effect of the COVID-19 pandemic on each country's global economy. It consists of the total cases, total deaths, stringency index, population, GDP per Capita, and Human Development Index of 210 countries around the world from the period of December 2019 to October 2020. The first COVID-19 case was found in China in the month of December 2019. This analysis is about how all each country got effected by the pandemic and how their ecomomy was affected.
+
+## 2.  ANALYSIS
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4, results='hide'}
+df <- read.csv("C:\\Users\\Rathan Raju\\OneDrive\\Desktop\\EDA\\Coursework - 2\\raw_data.csv")
+data<-read.csv("C:\\Users\\Rathan Raju\\OneDrive\\Desktop\\EDA\\Coursework - 2\\transformed_data.csv",colClasses = "factor", header=TRUE)
+#head(data)
+df = na.omit(df)
+
+df_pop <- df %>% group_by(df$location, df$population) %>% summarise(n=n())
+
+df_pop <- df_pop[,-3]
+
+df_total_pop <- df_pop$`df$population`
+df_pop$total_pop <-df_total_pop
+
+df_pop[c("total_pop")] <- df_pop[c("total_pop")]/1e6
+
+
+df_pop$countryname <- df_pop$`df$location`
+df_pop <- df_pop[,-1]
+df_pop <- df_pop[,-1]
+
+
+population_plot <- joinCountryData2Map(df_pop, joinCode="NAME", nameJoinColumn="countryname")
+mapCountryData(population_plot, nameColumnToPlot="total_pop", mapTitle="Population of each country in Millions", colourPalette="rainbow",oceanCol="lightblue", missingCountryCol="WHITE")
+```
+
+The above plot shows the population of each country in millions, we can clearly state that China, India, and United States of America has the highest number of populations in the world followed by other countries. The countries highlighted in the red are the countries have more than 50 million of population. The island nations of the Falkland and the Vatican are among the world's smallest countries in terms of population.  
+
+
+
+### 2.1 Time-Series exploration based on each Country
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=16, fig.height=8}
+
+data$DATE <- as.Date(data$DATE,format = "%Y-%m-%d")
+data$TC <- as.numeric(as.character(data$TC))
+data$TD <- as.numeric(as.character(data$TD))
+data$STI <- as.numeric(as.character(data$STI))
+
+
+uk_data <- data[which( data$COUNTRY == 'United Kingdom'),]
+colors <- c("Total Cases" = "Purple", "Total Deaths" = "red", "Stringency Index"="orange")
+ukg <- ggplot(uk_data, aes(x=DATE)) + 
+  geom_line(aes(y = TC, color = "Total Cases"),size = 1.5) + 
+  geom_line(aes(y = TD, color="Total Deaths"),size = 1.5)+
+  geom_line(aes(y = STI, color="Stringency Index"),size = 1.5)+
+  ylim(0,20) +labs(x = "Months(2020)",y = "Total Cases/Deaths",color = "Legend")+
+  scale_color_manual(values = colors) + ggtitle("UK Covid-19 Cases & Deaths") + scale_x_date(labels = date_format("%b %Y")) +
+  theme(legend.text=element_text(size=10),legend.title=element_text(size=15),axis.text.x=element_text(size=10),
+        axis.text.y = element_text(size = 10),axis.title = element_text(size=10,face="bold"), plot.title = element_text(face="bold",hjust=0.5,size=12))
+ukg
+
+```
+
+The number of coronavirus cases in the United Kingdom rose sharply in the third and fourth weeks of March, making it one of the top ten countries affected by the virus.  The number of confirmed coronavirus cases in the UK increased to 5,741 on March 23 and 34,000 on April 2, while the death toll rose to 2,900.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=16, fig.height=8}
+us_data <- data[which( data$COUNTRY == 'United States'),]
+usg <- ggplot(us_data, aes(x=DATE)) + 
+  geom_line(aes(y = TC, color = "Total Cases"),size = 1.5) + 
+  geom_line(aes(y = TD, color="Total Deaths"),size = 1.5)+ 
+  geom_line(aes(y = STI, color="Stringency Index"),size = 1.5)+
+  ylim(0,20) +labs(x = "Months(2020)",y = "Total Cases/Deaths",color = "Legend")+
+  scale_color_manual(values = colors) + ggtitle("USA Covid-19 Cases & Deaths") + scale_x_date(labels = date_format("%b %Y")) +
+  theme(legend.text=element_text(size=10),legend.title=element_text(size=15),axis.text.x=element_text(size=10),
+        axis.text.y = element_text(size = 10),axis.title = element_text(size=10,face="bold"), plot.title = element_text(face="bold",hjust=0.5,size=12))
+usg
+
+
+```
+
+As screening became more successful, confirmed coronavirus cases in the United States increased dramatically in the third week of March, surpassing China's on March 26 to make the United States the world's most affected country by coronavirus in terms of number of cases. The number of US COVID-19 cases surpassed that of South Korea on March 19, rising to over 33,500 on March 23 and over 240,000 on April 2, with the death toll reaching 5,800. Americans have expressed concern about the availability of enough test kits across states, while a shortage of ventilators has resulted in an increase in deaths. The first coronavirus case in the United States was confirmed on January 21, but as national monitoring was significantly increased, the number of cases started to rise in the second half of February and continued to rise in March.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=16, fig.height=8}
+ch_data <- data[which( data$COUNTRY == 'China'),]
+chg <- ggplot(ch_data, aes(x=DATE)) + 
+  geom_line(aes(y = TC, color = "Total Cases"),size = 1.5) + 
+  geom_line(aes(y = TD, color="Total Deaths"),size = 1.5)+
+  geom_line(aes(y = STI, color="Stringency Index"),size = 1.5)+
+  ylim(0,20)+labs(x = "Months(2020)",y = "Total Cases/Deaths",color = "Legend")+
+  scale_color_manual(values = colors) + ggtitle("China Covid-19 Cases & Deaths") + scale_x_date(labels = date_format("%b %Y")) +
+  theme(legend.text=element_text(size=10),legend.title=element_text(size=15),axis.text.x=element_text(size=10),
+        axis.text.y = element_text(size = 10),axis.title = element_text(size=10,face="bold"), plot.title = element_text(face="bold",hjust=0.5,size=12))
+chg
+
+```
+
+
+The novel coronavirus (nCoV) outbreak, which the World Health Organization has designated as COVID-19, was currently affecting China, including Hong Kong and Macau (WHO). China had over 3,000 deaths and accounted for approximately 74% of global coronavirus cases as of March 9th, but this quickly dropped to 58 percent by March 13 and 40% by March 18 as the number of cases in the rest of the world increased and Europe became the new epicentre. The remainder of the world's coronavirus infections had surpassed China's within a week. By the end of March, Chinese coronavirus infections accounted for just 10% of all cases worldwide. Hubei is China's most affected province, with Wuhan, the province's capital, taking the brunt of the virus's effects. In Hubei, more than 67,000 coronavirus-positive cases were identified, with deaths continued to be reported, though at a slower rate than before.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=16, fig.height=8}
+in_data <- data[which( data$COUNTRY == 'India'),]
+ing <- ggplot(in_data, aes(x=DATE)) + 
+  geom_line(aes(y = TC, color = "Total Cases"),size = 1.5) + 
+  geom_line(aes(y = TD, color="Total Deaths"),size = 1.5)+
+  geom_line(aes(y = STI, color="Stringency Index"),size = 1.5)+
+  ylim(0,20) +labs(x = "Months(2020)",y = "Total Cases/Deaths",color = "Legend")+
+  scale_color_manual(values = colors) + ggtitle("India Covid-19 Cases & Deaths") + scale_x_date(labels = date_format("%b %Y"))+
+  theme(legend.text=element_text(size=10),legend.title=element_text(size=15),axis.text.x=element_text(size=10),
+        axis.text.y = element_text(size = 10),axis.title = element_text(size=10,face="bold"), plot.title = element_text(face="bold",hjust=0.5,size=12))
+ing
+
+```
+
+Following China's Wuhan coronavirus outbreak, India's Kerala state, the world's second most populous country, has reported the first coronavirus case. New confirmed cases had been identified in a number of cities. New confirmed cases had been identified in a number of cities. There was a lot of activity at the state level at first. The pandemic, as well as its social and economic implications, would be different in different parts of the world, it was apparent. When the number of cases began to rise, the Indian government acted quickly. The government took drastic steps and enforced lockdowns across the country, which the stringency index helped to identify.
+
+## 3. HDI and GDP per captia for each country across the globe
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=4, results='hide'}
+df_hdi <- df %>% group_by(df$location, df$human_development_index) %>% summarise(n=n())
+
+
+
+df_hdi <- df_hdi[,-3]
+
+hdi <- df_hdi$`df$human_development_index`
+df_hdi$hdi <-hdi
+
+
+df_hdi$countryname <- df_hdi$`df$location`
+df_hdi <- df_hdi[,-1]
+df_hdi <- df_hdi[,-1]
+df_hdi
+
+n <- joinCountryData2Map(df_hdi, joinCode="NAME", nameJoinColumn="countryname")
+mapCountryData(n, nameColumnToPlot="hdi", mapTitle="Human Development Index of each country", colourPalette="topo", borderCol="Black",
+               oceanCol="lightblue", missingCountryCol="WHITE")
+
+
+
+```
+
+The Human Development Index (HDI) is a measure of average achievement in key aspects of human development, such as longevity, intelligence, and a decent standard of living. The HDI is the geometric mean of normalised indices in each of the three dimensions. The standard of living is calculated using gross national income per capita. The HDI uses the logarithm of income to reflect the decreasing value of income as GNI increases. To construct a composite index, the scores of the three HDI dimension indices are combined using geometric mean. The HDRO is a stronger proxy than the other composite indices for some of the core issues of human development, inequality, gender disparity, and poverty. Looking at the graph, we can see that the United States, Canada, the United Kingdom, and Australia have the highest Human Development Index (purple).
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=4, results='hide'}
+
+df_gdp <- df %>% group_by(df$location, df$gdp_per_capita) %>% summarise(n=n())
+
+df_gdp
+
+df_gdp <- df_gdp[,-3]
+
+gdp <- df_gdp$`df$gdp_per_capita`
+df_gdp$gdp <-gdp
+
+
+
+
+df_gdp$countryname <- df_gdp$`df$location`
+df_gdp <- df_gdp[,-1]
+df_gdp <- df_gdp[,-1]
+df_gdp
+
+n <- joinCountryData2Map(df_gdp, joinCode="NAME", nameJoinColumn="countryname")
+mapCountryData(n, nameColumnToPlot="gdp", mapTitle="GDP Per Captia in USD", colourPalette="heat",borderCol="Black",
+               oceanCol="lightblue", missingCountryCol="WHITE")
+
+
+```
+
+GDP per capita is calculated by dividing a country's economic output by the number of people living there. The per capita GDP of wealthy countries with smaller populations is often higher. Since it divides a country's economic production by its total population, GDP per capita is a strong measure of its standard of living. It also reveals how comfortable a nation feels to its people. As seen in the graph, Qatar, Kuwait, the United States, and a few other countries have the highest GDP per capita.
+
+
+## 4. Total cases and deaths for each countries
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.width=8, fig.height=4}
+
+Country <- c("United States", "Brazil", "India", "United Kingdom", "Russia", "France", "Italy", "Spain", "Germany", "China")
+
+df_tctd = data.frame(Country = c("United States", "Brazil", "India", "United Kingdom", "Russia", "France", "Italy", "Spain", "Germany", "China"), 
+                     Total_Cases = c(0,0,0,0,0,0,0,0,0,0), 
+                     Total_Deaths = c(0,0,0,0,0,0,0,0,0,0))
+
+df_tctd$Total_Cases[which(df_tctd$Country=="United States")] <- max(df$total_cases[which(df$location == "United States")]) 
+df_tctd$Total_Cases[which(df_tctd$Country=="Brazil")] <- max(df$total_cases[which(df$location == "Brazil")])
+df_tctd$Total_Cases[which(df_tctd$Country=="India")] <- max(df$total_cases[which(df$location == "India")])
+df_tctd$Total_Cases[which(df_tctd$Country=="United Kingdom")] <- max(df$total_cases[which(df$location == "United Kingdom")])
+df_tctd$Total_Cases[which(df_tctd$Country=="Russia")] <- max(df$total_cases[which(df$location == "Russia")])
+df_tctd$Total_Cases[which(df_tctd$Country=="France")] <- max(df$total_cases[which(df$location == "France")])
+df_tctd$Total_Cases[which(df_tctd$Country=="Italy")] <- max(df$total_cases[which(df$location == "Italy")])
+df_tctd$Total_Cases[which(df_tctd$Country=="Spain")] <- max(df$total_cases[which(df$location == "Spain")])
+df_tctd$Total_Cases[which(df_tctd$Country=="Germany")] <- max(df$total_cases[which(df$location == "Germany")])
+df_tctd$Total_Cases[which(df_tctd$Country=="China")] <- max(df$total_cases[which(df$location == "China")])
+
+df_tctd$Total_Deaths[which(df_tctd$Country=="United States")] <- max(df$total_deaths[which(df$location == "United States")]) 
+df_tctd$Total_Deaths[which(df_tctd$Country=="Brazil")] <- max(df$total_deaths[which(df$location == "Brazil")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="India")] <- max(df$total_deaths[which(df$location == "India")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="United Kingdom")] <- max(df$total_deaths[which(df$location == "United Kingdom")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="Russia")] <- max(df$total_deaths[which(df$location == "Russia")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="France")] <- max(df$total_deaths[which(df$location == "France")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="Italy")] <- max(df$total_deaths[which(df$location == "Italy")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="Spain")] <- max(df$total_deaths[which(df$location == "Spain")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="Germany")] <- max(df$total_deaths[which(df$location == "Germany")])
+df_tctd$Total_Deaths[which(df_tctd$Country=="China")] <- max(df$total_deaths[which(df$location == "China")])
+
+
+
+df_tctd <- df_tctd[order(-df_tctd$Total_Cases),]
+
+
+#df_tctd
+level1 = c("United States", "India", "Brazil",  "United Kingdom", "Russia", "France", "Italy", "Spain", "Germany", "China")
+df_tctd[c("Total_Cases")] <- df_tctd[c("Total_Cases")]/1e6
+df_tctd %>%
+  mutate(name = fct_reorder(df_tctd$Country, df_tctd$Total_Cases)) %>%
+  ggplot( aes(x=factor(df_tctd$Country,levels = level1),  y=df_tctd$Total_Cases)) +
+  geom_bar(stat="identity", fill="#387aff", alpha=.6, width=.4) +
+  coord_flip() +
+  labs(y = "Total Cases in Millions", x= "Top 10 Countries") +
+  theme_bw()
+
+
+```
+
+In the graph above, countries can be sorted by total instances. On the relevant date, the countries with blue bars are those where cases have risen to more than 10,000 a day. We can see from the graph above that the United States has the most instances, followed by India and Brazil.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=4}
+df_tctd %>%
+  arrange(df_tctd$Total_Deaths) %>%    # First sort by val. This sort the dataframe but NOT the factor levels
+  mutate(name = fct_reorder(df_tctd$Country, df_tctd$Total_Deaths)) %>%   # This trick update the factor levels
+  ggplot( aes(x=factor(df_tctd$Country,levels = level1),  y=df_tctd$Total_Deaths)) +
+  geom_segment( aes(xend=df_tctd$Country, yend=0)) +
+  geom_point( size=4, color="red") +
+  coord_flip() +
+  theme_bw() +
+  labs(y ="Total Deaths", x= "Top 10 Countries")
+```
+
+
+When a pandemic spreads across the world, it leaves a trail of death in its wake. Europe and North America actually outnumbered Asia in terms of deaths. According to the above graph, the United States has the highest number of deaths, followed by Brazil.
+
+
+## 5. CONCLUSION
+
+By analyzing the dataset, we can conclude that the daily cases in almost all the countries got surged and we could see a straight line in the graphs. The most affected country is the United States in terms of cases, deaths and economy. The global economy got declined due to the pandemic and it led to the worst reccession since financial crisis. 
+
+
+
+
+## 6. REFERENCES
+
+1. https://www.r-graph-gallery.com/301-custom-lollipop-chart.html#horiz
+2. https://rstudio-pubs-static.s3.amazonaws.com/7433_4537ea5073dc4162950abb715f513469.html
+3. https://community.rstudio.com/
+4. https://www.pharmaceutical-technology.com/features/covid-19-coronavirus-top-ten-most-affected-countries/
+5. https://www.businessinsider.in/politics/india/news/check-out-the-10-most-affected-countries-with-the-highest-number-of-coronavirus-cases/slidelist/76275918.cms#slideid=76275944
+7. https://www.kaggle.com/shashwatwork/impact-of-covid19-pandemic-on-the-global-economy
+
+## 7. Team members names and their ID's
+
+1. RATHAN NARAYANA RAJU - 2005269
+2. ANTHASH PALIYATHAZHATH ABUBAKKAR - 2004319
+3. SAI CHANDU PALKAPATI - 2006308
+4. KAPILBHAI SOLANKI - 2009316 
+5. MAMATHA SAI YARABARLA - 2003275

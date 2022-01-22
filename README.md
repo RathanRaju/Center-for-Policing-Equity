@@ -1,5 +1,7 @@
 # Center for Policing Equity
 
+#### Tools Used - RStudio
+
 ### Link for dataset for the Center for Policing Equity - https://www.kaggle.com/center-for-policing-equity/data-science-for-good
 
 #### This project explains the analysis of crime incidents that happened in the year 2016 in the city of Dallas, Texas. The data consists of around 2384 incidents that occurred. This analysis mainly focuses on the crime rates that were committed by offenders. It mainly discusses the racial discrimination between the Whites and Blacks. This analysis helps us to understand the police violence on a minority group.
